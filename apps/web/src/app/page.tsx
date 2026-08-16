@@ -23,7 +23,24 @@ export default function HomePage() {
   const matchId = useCallStore((s) => s.matchId);
 
   // Use the extracted hook
-  const { rtcManager, toggleMic, toggleCamera, skipMatch } = useChatSession(isStarted);
+  const { rtcManager, toggleMic, toggleCamera, skipMatch } = useChatSession({
+    isStarted,
+    onChatMessageReceived: (messageId, senderSessionId, content, sentAt) => {
+      setChatMessages((prev) => [
+        ...prev,
+        { id: messageId, senderSessionId, content, sentAt },
+      ]);
+    },
+    onChatMessageDeleted: (messageId, scope) => {
+      if (scope === "me") {
+        setChatMessages((prev) => prev.filter((m) => m.id !== messageId));
+      } else {
+        setChatMessages((prev) =>
+          prev.map((m) => (m.id === messageId ? { ...m, isDeletedForEveryone: true } : m))
+        );
+      }
+    },
+  });
 
   const handleSendMessage = (content: string) => {
     if (!matchId) return;
@@ -63,16 +80,32 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white overflow-hidden">
-      {/* Header Bar */}
-      <header className="h-16 border-b border-slate-800/80 bg-slate-900/50 backdrop-blur-xl px-6 flex items-center justify-between sticky top-0 z-30">
+    <div className="h-[100dvh] w-screen overflow-hidden relative bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
+      {/* Absolute Full-Bleed Background Video Container (Only rendered when started) */}
+      <AnimatePresence>
+        {isStarted && (
+          <motion.div
+            key="video-container"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            className="absolute inset-0 z-0"
+          >
+            <VideoContainer />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Glass Header */}
+      <header className="absolute top-0 w-full h-20 bg-gradient-to-b from-black/60 to-transparent z-40 px-6 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 p-0.5 shadow-lg shadow-indigo-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
-              <Video className="w-5 h-5 text-indigo-400" />
+            <div className="w-full h-full bg-black/50 backdrop-blur-md rounded-[14px] flex items-center justify-center">
+              <Video className="w-5 h-5 text-white" />
             </div>
           </div>
-          <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+          <span className="text-xl font-bold tracking-tight text-white drop-shadow-md">
             ChatSpin
           </span>
         </div>
@@ -80,27 +113,27 @@ export default function HomePage() {
         <div className="flex items-center space-x-3">
           <Link
             href="/history"
-            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center space-x-2 text-xs font-semibold"
+            className="p-2.5 rounded-xl bg-black/20 backdrop-blur-md border border-white/10 text-white/90 hover:bg-white/10 transition-all flex items-center space-x-2 text-xs font-semibold shadow-lg"
           >
-            <History className="w-4 h-4 text-indigo-400" />
+            <History className="w-4 h-4 text-indigo-300" />
             <span className="hidden sm:inline">Meet History</span>
           </Link>
 
           <Link
             href="/safety"
-            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center space-x-2 text-xs font-semibold"
+            className="p-2.5 rounded-xl bg-black/20 backdrop-blur-md border border-white/10 text-white/90 hover:bg-white/10 transition-all flex items-center space-x-2 text-xs font-semibold shadow-lg"
           >
-            <Shield className="w-4 h-4 text-emerald-400" />
+            <Shield className="w-4 h-4 text-emerald-300" />
             <span className="hidden sm:inline">Safety</span>
           </Link>
 
           {isStarted && (
             <button
               onClick={() => setIsChatOpen(!isChatOpen)}
-              className={`p-2.5 rounded-xl border transition-all flex items-center space-x-2 text-xs font-semibold ${
+              className={`p-2.5 rounded-xl border backdrop-blur-md transition-all flex items-center space-x-2 text-xs font-semibold shadow-lg ${
                 isChatOpen
-                  ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/20"
-                  : "bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800"
+                  ? "bg-indigo-600/80 border-indigo-500 text-white shadow-indigo-500/30"
+                  : "bg-black/20 border-white/10 text-white/90 hover:bg-white/10"
               }`}
               title="Toggle Chat"
             >
@@ -112,7 +145,7 @@ export default function HomePage() {
           {rtcManager && (
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-all"
+              className="p-2.5 rounded-xl bg-black/20 backdrop-blur-md border border-white/10 text-white/90 hover:bg-white/10 transition-all shadow-lg"
               title="Device Settings"
             >
               <Settings className="w-4 h-4" />
@@ -121,7 +154,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Main Container */}
+      {/* Main Overlay Content */}
       <AnimatePresence mode="wait">
         {!isStarted ? (
           <motion.main
@@ -130,7 +163,7 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-4xl mx-auto space-y-8"
+            className="relative z-10 flex-1 h-full flex flex-col items-center justify-center p-6 text-center max-w-4xl mx-auto space-y-8"
           >
             <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold tracking-wide uppercase">
               <Sparkles className="w-4 h-4 animate-spin-slow" />
@@ -154,69 +187,46 @@ export default function HomePage() {
                 Start Chatting Anonymously
               </button>
             </div>
-
-            <p className="text-xs text-slate-500 pt-8 max-w-md">
-              By starting a chat, you confirm that you are at least 18 years old and agree to our{" "}
-              <Link href="/terms" className="text-indigo-400 hover:underline">
-                Terms
-              </Link>{" "}
-              &{" "}
-              <Link href="/community-guidelines" className="text-indigo-400 hover:underline">
-                Community Guidelines
-              </Link>
-              .
-            </p>
           </motion.main>
         ) : (
-          <motion.main
-            key="chat"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="flex-1 flex flex-col p-4 md:p-6 space-y-4 max-w-7xl mx-auto w-full h-[calc(100vh-4rem)]"
+          <motion.div
+            key="chat-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 pointer-events-none z-30" // Pointer events none so video clicks pass through
           >
-            <div className="flex-1 flex gap-4 min-h-0 relative">
-              {/* Video Container */}
-              <motion.div
-                layout
-                className="flex-1 h-full min-h-0 rounded-2xl overflow-hidden"
-              >
-                <VideoContainer />
-              </motion.div>
+            {/* Floating Chat Panel */}
+            <AnimatePresence>
+              {isChatOpen && (
+                <motion.div
+                  initial={{ opacity: 0, x: 50, scale: 0.95 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 50, scale: 0.95 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="absolute top-24 right-4 bottom-32 w-80 sm:w-96 pointer-events-auto shadow-2xl rounded-3xl overflow-hidden"
+                >
+                  <ChatPanel
+                    currentSessionId="me"
+                    matchId={matchId}
+                    messages={chatMessages}
+                    onSendMessage={handleSendMessage}
+                    onDeleteMessage={handleDeleteMessage}
+                    onClose={() => setIsChatOpen(false)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-              {/* Side Chat Panel */}
-              <AnimatePresence>
-                {isChatOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, x: 50, width: 0 }}
-                    animate={{ opacity: 1, x: 0, width: "380px" }}
-                    exit={{ opacity: 0, x: 50, width: 0 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="h-full bg-slate-900 border border-slate-800 rounded-3xl p-4 flex flex-col shadow-xl shrink-0"
-                  >
-                    <ChatPanel
-                      currentSessionId="me"
-                      matchId={matchId}
-                      messages={chatMessages}
-                      onSendMessage={handleSendMessage}
-                      onDeleteMessage={handleDeleteMessage}
-                      onClose={() => setIsChatOpen(false)}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Call Control Bar */}
-            <div className="shrink-0">
+            {/* Floating Call Controls */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-auto">
               <CallControls
                 onToggleMic={toggleMic}
                 onToggleCamera={toggleCamera}
                 onSkip={skipMatch}
               />
             </div>
-          </motion.main>
+          </motion.div>
         )}
       </AnimatePresence>
 

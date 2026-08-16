@@ -17,14 +17,14 @@ export function CallControls({ onToggleMic, onToggleCamera, onSkip }: CallContro
   const canSkip = status === "connected" || status === "searching" || status === "connecting" || status === "peer_disconnected";
 
   return (
-    <div className="flex items-center justify-center space-x-4 py-4">
+    <div className="flex items-center justify-center space-x-4 p-4 rounded-full bg-slate-950/60 backdrop-blur-2xl border border-white/10 shadow-2xl">
       {/* Microphone Toggle */}
       <button
         onClick={onToggleMic}
-        className={`p-4 rounded-full transition-all shadow-lg ${
+        className={`p-4 rounded-full transition-all ${
           isMicMuted
-            ? "bg-red-600 hover:bg-red-500 text-white"
-            : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+            ? "bg-red-500/80 hover:bg-red-500 text-white"
+            : "bg-white/10 hover:bg-white/20 text-white"
         }`}
         title={isMicMuted ? "Unmute Microphone" : "Mute Microphone"}
       >
@@ -34,10 +34,10 @@ export function CallControls({ onToggleMic, onToggleCamera, onSkip }: CallContro
       {/* Camera Toggle */}
       <button
         onClick={onToggleCamera}
-        className={`p-4 rounded-full transition-all shadow-lg ${
+        className={`p-4 rounded-full transition-all ${
           isCameraDisabled
-            ? "bg-red-600 hover:bg-red-500 text-white"
-            : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+            ? "bg-red-500/80 hover:bg-red-500 text-white"
+            : "bg-white/10 hover:bg-white/20 text-white"
         }`}
         title={isCameraDisabled ? "Turn On Camera" : "Turn Off Camera"}
       >
@@ -48,10 +48,10 @@ export function CallControls({ onToggleMic, onToggleCamera, onSkip }: CallContro
       <button
         onClick={onSkip}
         disabled={!canSkip}
-        className="px-6 py-4 rounded-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed font-bold text-white transition-all shadow-lg shadow-indigo-500/25 flex items-center space-x-2"
+        className="px-6 py-4 rounded-full bg-indigo-600/90 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed font-bold text-white transition-all shadow-lg shadow-indigo-500/30 flex items-center space-x-2"
         title="Next Stranger (Skip)"
       >
-        <span>Next Stranger</span>
+        <span>Next</span>
         <SkipForward className="w-5 h-5" />
       </button>
     </div>

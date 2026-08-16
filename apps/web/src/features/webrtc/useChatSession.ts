@@ -4,7 +4,13 @@ import { WebRTCManager } from "./WebRTCManager";
 import { useCallStore } from "@/store/useCallStore";
 import { toast } from "sonner";
 
-export function useChatSession(isStarted: boolean) {
+interface UseChatSessionOptions {
+  isStarted: boolean;
+  onChatMessageReceived?: (messageId: string, senderSessionId: string, content: string, sentAt: string) => void;
+  onChatMessageDeleted?: (messageId: string, scope: string) => void;
+}
+
+export function useChatSession({ isStarted, onChatMessageReceived, onChatMessageDeleted }: UseChatSessionOptions) {
   const rtcManagerRef = useRef<WebRTCManager | null>(null);
   
   // Create or retrieve manager
@@ -82,8 +88,14 @@ export function useChatSession(isStarted: boolean) {
               requestId: crypto.randomUUID(),
             });
           },
-          onServerMessage: (msg) => {
-            void manager.handleServerMessage(msg);
+          onServerMessage: (msg: any) => {
+            if (msg.type === "chat:message") {
+              onChatMessageReceived?.(msg.messageId, msg.senderSessionId, msg.content, msg.sentAt);
+            } else if (msg.type === "chat:message-delete" || msg.type === "chat:message-deleted") {
+              onChatMessageDeleted?.(msg.messageId, msg.scope);
+            } else {
+              void manager.handleServerMessage(msg);
+            }
           },
         });
       })
