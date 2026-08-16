@@ -11,6 +11,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN pnpm --filter @chatspin/config build
 RUN pnpm --filter @chatspin/shared build
 RUN pnpm --filter @chatspin/protocol build
+
+ARG NEXT_PUBLIC_WS_URL
+ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
 RUN pnpm --filter @chatspin/web build
 
 FROM base AS runner

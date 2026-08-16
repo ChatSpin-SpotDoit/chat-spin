@@ -48,6 +48,8 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/chatspin-web:latest
+          build-args: |
+            NEXT_PUBLIC_WS_URL=wss://api.3dhive.in/ws
 
       - name: Copy Compose files to Oracle VM
         uses: appleboy/scp-action@v0.1.7
