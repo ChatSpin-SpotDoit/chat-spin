@@ -48,17 +48,6 @@ services:
       redis:
         condition: service_healthy
 
-  nginx:
-    image: nginx:alpine
-    container_name: chatspin-nginx
-    restart: always
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    depends_on:
-      - server
 
 volumes:
   postgres_backend_data:
