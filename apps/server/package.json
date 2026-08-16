@@ -8,6 +8,8 @@
     "build": "tsc --project tsconfig.json",
     "start": "node --env-file=../../.env dist/index.js",
     "typecheck": "tsc --project tsconfig.json --noEmit",
+    "db:push": "node --env-file=../../.env ./node_modules/drizzle-kit/bin.cjs push",
+    "test": "node --env-file=../../.env ./node_modules/vitest/vitest.mjs run",
     "lint": "eslint src --max-warnings 0",
     "clean": "rimraf dist"
   },
@@ -32,6 +34,7 @@
     "pino-pretty": "^13.0.0",
     "rimraf": "^6.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
   }
 }

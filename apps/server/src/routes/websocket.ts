@@ -110,7 +110,6 @@ export async function websocketRoutes(app: FastifyInstance) {
             if (ok) {
               send({
                 type: "heartbeat:ack",
-                serverTime: Date.now(),
               });
             } else {
               sendError(WsErrorCode.INVALID_STATE, "Session not initialized or expired");
@@ -128,8 +127,7 @@ export async function websocketRoutes(app: FastifyInstance) {
             if (ok) {
               send({
                 type: "queue:joined",
-                position: 1,
-                requestId: msg.requestId,
+                joinedAtMs: Date.now(),
               });
             } else {
               sendError(WsErrorCode.BANNED, "Unable to join queue (banned or invalid state)", msg.requestId);
@@ -146,7 +144,6 @@ export async function websocketRoutes(app: FastifyInstance) {
             await matchmakingService.leaveQueue(currentSessionId);
             send({
               type: "queue:left",
-              requestId: msg.requestId,
             });
             break;
           }

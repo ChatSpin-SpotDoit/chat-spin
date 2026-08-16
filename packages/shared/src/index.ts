@@ -102,3 +102,6 @@ export const DM_MAX_MESSAGE_LENGTH = 2_000 as const;
 
 // "Delete for everyone" window (ms)
 export const CHAT_DELETE_EVERYONE_WINDOW_MS = 300_000 as const;
+
+// Retention purge threshold (days)
+export const CHAT_RETENTION_DAYS = 7 as const;

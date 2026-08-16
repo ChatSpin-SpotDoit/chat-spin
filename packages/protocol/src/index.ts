@@ -1,23 +1,20 @@
 import { z } from "zod";
 import {
   PROTOCOL_VERSION,
-  ChatDeleteScope,
-  PeerRole,
   WsErrorCode,
+  ChatDeleteScope,
 } from "@chatspin/shared";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 const uuid = z.string().uuid();
-const requestId = uuid.describe("client-generated idempotency key");
+const requestId = z.string().uuid();
 
-// ─── Client → Server Messages ─────────────────────────────────────────────────
+// ─── Client -> Server Messages ───────────────────────────────────────────────
 
 export const SessionInitSchema = z.object({
   type: z.literal("session:init"),
   protocolVersion: z.literal(PROTOCOL_VERSION),
-  deviceToken: uuid.describe("UUID from localStorage — always present"),
-  authToken: z.string().optional().describe("NextAuth JWT — present if logged in"),
+  deviceToken: uuid,
+  authToken: z.string().optional(),
   requestId,
 });
 
@@ -83,6 +80,14 @@ export const ChatMessageSchema = z.object({
   matchId: uuid,
   messageId: uuid.describe("client-generated UUID for idempotency"),
   content: z.string().min(1).max(1000),
+  requestId,
+});
+
+export const ChatMessageDeleteSchema = z.object({
+  type: z.literal("chat:message-delete"),
+  matchId: uuid,
+  messageId: uuid,
+  scope: z.nativeEnum(ChatDeleteScope),
   requestId,
 });
 
@@ -163,6 +168,7 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
   WebRtcAnswerSchema,
   WebRtcIceCandidateSchema,
   ChatMessageSchema,
+  ChatMessageDeleteSchema,
   FriendCallSchema,
   FriendCallAcceptSchema,
   FriendCallDeclineSchema,
@@ -176,41 +182,32 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
 
 export type ClientMessage = z.infer<typeof ClientMessageSchema>;
 
-// ─── Server → Client Messages ─────────────────────────────────────────────────
+// ─── Server -> Client Message Interfaces ─────────────────────────────────────
 
 export interface SessionReadyMessage {
   type: "session:ready";
   sessionId: string;
-  identityType: "anonymous" | "google";
+  identityType: string;
 }
 
 export interface HeartbeatAckMessage {
   type: "heartbeat:ack";
-  serverTime: number;
-}
-
-export interface WsErrorMessage {
-  type: "error";
-  code: WsErrorCode;
-  message: string;
-  requestId?: string;
 }
 
 export interface QueueJoinedMessage {
   type: "queue:joined";
-  position: number;
-  requestId: string;
+  joinedAtMs: number;
 }
 
 export interface QueueLeftMessage {
   type: "queue:left";
-  requestId: string;
 }
 
 export interface MatchFoundMessage {
   type: "match:found";
   matchId: string;
-  role: PeerRole;
+  peerSessionId: string;
+  role: "offerer" | "answerer";
   turnCredentials: {
     urls: string[];
     username: string;
@@ -218,10 +215,14 @@ export interface MatchFoundMessage {
   };
 }
 
+export interface MatchSkippedMessage {
+  type: "match:skipped";
+  matchId: string;
+}
+
 export interface PeerDisconnectedMessage {
   type: "peer:disconnected";
   matchId: string;
-  reason: string;
 }
 
 export interface WebRtcOfferRelayMessage {
@@ -240,61 +241,80 @@ export interface WebRtcIceCandidateRelayMessage {
   type: "webrtc:ice-candidate";
   matchId: string;
   candidate: string;
-  sdpMid: string | null;
-  sdpMLineIndex: number | null;
+  sdpMid?: string | null;
+  sdpMLineIndex?: number | null;
 }
 
-export interface ChatMessageDeliveryMessage {
+export interface ChatMessageRelayMessage {
   type: "chat:message";
   matchId: string;
   messageId: string;
-  content: string;
   senderSessionId: string;
-  sentAt: string; // ISO 8601
+  content: string;
+  sentAt: string;
 }
 
-export interface ChatMessageDeletedMessage {
+export interface ChatMessageDeletedRelayMessage {
   type: "chat:message-deleted";
   matchId: string;
   messageId: string;
+  scope: ChatDeleteScope;
 }
 
 export interface FriendAutoConnectedMessage {
   type: "friend:auto-connected";
   friendshipId: string;
+  friendSessionId: string;
+}
+
+export interface FriendPresenceMessage {
+  type: "friend:presence";
+  friendSessionId: string;
+  status: "online" | "busy" | "offline";
 }
 
 export interface FriendIncomingCallMessage {
   type: "friend:incoming-call";
   callId: string;
   friendshipId: string;
-  fromDisplayName: string;
-}
-
-export interface FriendCallAcceptedMessage {
-  type: "friend:call-accepted";
-  callId: string;
-  role: PeerRole;
-  turnCredentials: {
-    urls: string[];
-    username: string;
-    credential: string;
-  };
+  callerSessionId: string;
 }
 
 export interface FriendCallDeclinedMessage {
   type: "friend:call-declined";
   callId: string;
+  reason: string;
 }
 
-export interface FriendCallNoAnswerMessage {
-  type: "friend:call-no-answer";
+export interface FriendCallConnectedMessage {
+  type: "friend:call-connected";
+  callId: string;
+  role: "offerer" | "answerer";
+}
+
+export interface FriendCallEndedMessage {
+  type: "friend:call-ended";
   callId: string;
 }
 
-export interface FriendPresenceMessage {
-  type: "friend:online" | "friend:offline" | "friend:busy" | "friend:free";
-  friendshipId: string;
+export interface FriendWebRtcOfferMessage {
+  type: "friend:webrtc:offer";
+  callId: string;
+  sdp: string;
+}
+
+export interface FriendWebRtcAnswerMessage {
+  type: "friend:webrtc:answer";
+  callId: string;
+  sdp: string;
+}
+
+export interface FriendWebRtcIceCandidateMessage {
+  type: "friend:webrtc:ice-candidate";
+  callId: string;
+  candidate: string;
+  sdpMid?: string | null;
+  sdpMLineIndex?: number | null;
 }
 
 export interface FriendRemovedMessage {
@@ -302,63 +322,44 @@ export interface FriendRemovedMessage {
   friendshipId: string;
 }
 
-export interface DmMessageDeliveryMessage {
+export interface DmMessageRelayMessage {
   type: "dm:message";
   friendshipId: string;
   messageId: string;
-  content: string;
   senderSessionId: string;
-  sentAt: string; // ISO 8601
+  content: string;
+  sentAt: string;
 }
 
-export interface DmMessageDeletedMessage {
-  type: "dm:message-deleted";
-  friendshipId: string;
-  messageId: string;
-}
-
-export interface FriendWebRtcOfferRelayMessage {
-  type: "friend:webrtc:offer";
-  callId: string;
-  sdp: string;
-}
-
-export interface FriendWebRtcAnswerRelayMessage {
-  type: "friend:webrtc:answer";
-  callId: string;
-  sdp: string;
-}
-
-export interface FriendWebRtcIceCandidateRelayMessage {
-  type: "friend:webrtc:ice-candidate";
-  callId: string;
-  candidate: string;
-  sdpMid: string | null;
-  sdpMLineIndex: number | null;
+export interface ErrorMessage {
+  type: "error";
+  code: WsErrorCode;
+  message: string;
+  requestId?: string;
 }
 
 export type ServerMessage =
   | SessionReadyMessage
   | HeartbeatAckMessage
-  | WsErrorMessage
   | QueueJoinedMessage
   | QueueLeftMessage
   | MatchFoundMessage
+  | MatchSkippedMessage
   | PeerDisconnectedMessage
   | WebRtcOfferRelayMessage
   | WebRtcAnswerRelayMessage
   | WebRtcIceCandidateRelayMessage
-  | ChatMessageDeliveryMessage
-  | ChatMessageDeletedMessage
+  | ChatMessageRelayMessage
+  | ChatMessageDeletedRelayMessage
   | FriendAutoConnectedMessage
-  | FriendIncomingCallMessage
-  | FriendCallAcceptedMessage
-  | FriendCallDeclinedMessage
-  | FriendCallNoAnswerMessage
   | FriendPresenceMessage
+  | FriendIncomingCallMessage
+  | FriendCallDeclinedMessage
+  | FriendCallConnectedMessage
+  | FriendCallEndedMessage
+  | FriendWebRtcOfferMessage
+  | FriendWebRtcAnswerMessage
+  | FriendWebRtcIceCandidateMessage
   | FriendRemovedMessage
-  | DmMessageDeliveryMessage
-  | DmMessageDeletedMessage
-  | FriendWebRtcOfferRelayMessage
-  | FriendWebRtcAnswerRelayMessage
-  | FriendWebRtcIceCandidateRelayMessage;
+  | DmMessageRelayMessage
+  | ErrorMessage;

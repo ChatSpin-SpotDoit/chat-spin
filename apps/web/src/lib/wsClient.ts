@@ -36,9 +36,22 @@ export class WsClient {
     this.serverUrl = serverUrl;
   }
 
-  public connect(listeners: WsClientListeners = {}): void {
-    this.listeners = listeners;
-    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+  public connect(
+    urlOrListeners?: string | WsClientListeners,
+    listeners: WsClientListeners = {}
+  ): void {
+    if (typeof urlOrListeners === "string") {
+      this.serverUrl = urlOrListeners;
+      this.listeners = listeners;
+    } else if (urlOrListeners) {
+      this.listeners = urlOrListeners;
+    }
+
+    if (
+      this.socket &&
+      (this.socket.readyState === WebSocket.OPEN ||
+        this.socket.readyState === WebSocket.CONNECTING)
+    ) {
       return;
     }
 
@@ -179,3 +192,5 @@ export class WsClient {
     this.listeners.onStatusChange?.(newStatus);
   }
 }
+
+export const wsClient = new WsClient();

@@ -196,6 +196,7 @@ export class MatchmakingService {
       await pubSubService.publishToSession(sessionA, {
         type: "match:found",
         matchId,
+        peerSessionId: sessionB,
         role: PeerRole.OFFERER,
         turnCredentials,
       });
@@ -204,6 +205,7 @@ export class MatchmakingService {
       await pubSubService.publishToSession(sessionB, {
         type: "match:found",
         matchId,
+        peerSessionId: sessionA,
         role: PeerRole.ANSWERER,
         turnCredentials,
       });
@@ -257,7 +259,6 @@ export class MatchmakingService {
         await pubSubService.publishToSession(peerSessionId, {
           type: "peer:disconnected",
           matchId,
-          reason: "Partner skipped the call",
         });
       }
 
@@ -329,10 +330,12 @@ export class MatchmakingService {
             await pubSubService.publishToSession(sessionA, {
               type: "friend:auto-connected",
               friendshipId,
+              friendSessionId: sessionB,
             });
             await pubSubService.publishToSession(sessionB, {
               type: "friend:auto-connected",
               friendshipId,
+              friendSessionId: sessionA,
             });
 
             logger.info({ sessionA, sessionB, friendshipId }, "Auto-friendship created after 5min call");

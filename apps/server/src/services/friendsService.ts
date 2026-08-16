@@ -110,7 +110,7 @@ export class FriendsService {
       type: "friend:incoming-call",
       callId,
       friendshipId,
-      fromDisplayName: "Your Friend",
+      callerSessionId,
     });
 
     logger.info({ callId, callerSessionId, calleeSessionId }, "Friend call initiated");
@@ -133,16 +133,11 @@ export class FriendsService {
 
     await redis.hset(`friend-call:${callId}`, "status", "active");
 
-    // Notify caller that call was accepted
+    // Notify caller that call was connected
     await pubSubService.publishToSession(callerSessionId, {
-      type: "friend:call-accepted",
+      type: "friend:call-connected",
       callId,
       role: PeerRole.OFFERER,
-      turnCredentials: {
-        urls: ["stun:stun.l.google.com:19302"],
-        username: "",
-        credential: "",
-      },
     });
 
     logger.info({ callId, callerSessionId, calleeSessionId }, "Friend call accepted");
@@ -158,6 +153,7 @@ export class FriendsService {
       await pubSubService.publishToSession(callData["callerSessionId"], {
         type: "friend:call-declined",
         callId,
+        reason: "User declined call",
       });
     }
 

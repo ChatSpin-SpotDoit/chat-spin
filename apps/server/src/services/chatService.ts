@@ -4,7 +4,11 @@ import { logger } from "../lib/logger.js";
 import { chatMessages, chatMessageDeletions, chatSessionDeletions, matches } from "../db/schema.js";
 import { eq, and, lte, notInArray, sql } from "drizzle-orm";
 import { pubSubService } from "./pubsubService.js";
-import { CHAT_DELETE_EVERYONE_WINDOW_MS } from "@chatspin/shared";
+import {
+  CHAT_DELETE_EVERYONE_WINDOW_MS,
+  CHAT_RETENTION_DAYS,
+  ChatDeleteScope,
+} from "@chatspin/shared";
 
 export class ChatService {
   /**
@@ -120,6 +124,7 @@ export class ChatService {
             type: "chat:message-deleted",
             matchId: msg.matchId,
             messageId,
+            scope: ChatDeleteScope.EVERYONE,
           });
         }
       }
