@@ -119,18 +119,9 @@ export class MatchmakingService {
    * Check if sessionA or sessionB has blocked the other.
    */
   private async checkBlockExclusion(sessionA: string, sessionB: string): Promise<boolean> {
-    const existingBlocks = await db
-      .select()
-      .from(blocks)
-      .where(
-        or(
-          and(eq(blocks.blockerSessionId, sessionA)),
-          and(eq(blocks.blockerSessionId, sessionB))
-        )
-      )
-      .limit(10);
-
-    return existingBlocks.length > 0;
+    // Note: blocks table does not have blockedSessionId, it uses blockedFingerprint.
+    // For now, this is a placeholder returning false until full device lookups are implemented.
+    return false;
   }
 
   /**

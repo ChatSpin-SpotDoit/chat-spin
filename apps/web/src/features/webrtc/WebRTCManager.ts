@@ -9,7 +9,8 @@ import { PeerRole } from "@chatspin/shared";
 export interface WebRTCManagerCallbacks {
   onLocalStream: (stream: MediaStream) => void;
   onRemoteStream: (stream: MediaStream) => void;
-  onStatusChange: (status: "connecting" | "connected" | "reconnecting" | "failed") => void;
+  onStatusChange: (status: "searching" | "connecting" | "connected" | "reconnecting" | "failed" | "peer_disconnected") => void;
+  onMatchFound: (matchId: string) => void;
   onMatchSkipped: () => void;
 }
 
@@ -30,9 +31,14 @@ export class WebRTCManager {
   }
 
   public async initMedia(): Promise<MediaStream> {
-    const stream = await this.mediaManager.getLocalStream();
-    this.callbacks.onLocalStream(stream);
-    return stream;
+    try {
+      const stream = await this.mediaManager.getLocalStream();
+      this.callbacks.onLocalStream(stream);
+      return stream;
+    } catch (err: any) {
+      console.error("WebRTCManager initMedia failed:", err);
+      throw err;
+    }
   }
 
   public async handleMatchFound(
@@ -42,6 +48,7 @@ export class WebRTCManager {
   ): Promise<void> {
     this.currentMatchId = matchId;
     this.role = role;
+    this.callbacks.onMatchFound(matchId);
     this.callbacks.onStatusChange("connecting");
 
     const iceServers: RTCIceServer[] = turnCredentials.urls.map((url) => ({
@@ -97,6 +104,20 @@ export class WebRTCManager {
 
   public async handleServerMessage(msg: ServerMessage): Promise<void> {
     switch (msg.type) {
+      case "queue:joined": {
+        this.callbacks.onStatusChange("searching");
+        break;
+      }
+
+      case "match:found": {
+        await this.handleMatchFound(
+          msg.matchId,
+          msg.role as PeerRole,
+          msg.turnCredentials
+        );
+        break;
+      }
+
       case "webrtc:offer": {
         if (msg.matchId !== this.currentMatchId) return;
         await this.peerConnection.setRemoteDescription(msg.sdp, "offer");
@@ -129,6 +150,14 @@ export class WebRTCManager {
       case "peer:disconnected": {
         if (msg.matchId === this.currentMatchId) {
           this.cleanupCall();
+          this.callbacks.onStatusChange("peer_disconnected");
+        }
+        break;
+      }
+
+      case "match:skipped": {
+        if (msg.matchId === this.currentMatchId) {
+          this.cleanupCall();
           this.callbacks.onMatchSkipped();
         }
         break;
@@ -151,5 +180,10 @@ export class WebRTCManager {
     this.connectionMonitor.clearTimers();
     this.peerConnection.close();
     this.currentMatchId = null;
+  }
+
+  public destroy(): void {
+    this.cleanupCall();
+    this.mediaManager.stopLocalStream();
   }
 }

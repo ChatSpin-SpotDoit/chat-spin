@@ -26,8 +26,9 @@ export async function buildApp() {
     contentSecurityPolicy: env.NODE_ENV === "production",
   });
 
+  const allowedOrigins = env.ALLOWED_ORIGINS.split(",").map((o) => o.trim());
   await app.register(cors, {
-    origin: env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()),
+    origin: allowedOrigins.includes("*") ? true : allowedOrigins,
     credentials: true,
   });
 

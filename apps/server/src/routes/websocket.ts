@@ -10,6 +10,7 @@ import { chatService } from "../services/chatService.js";
 import { moderationService } from "../services/moderationService.js";
 import { friendsService } from "../services/friendsService.js";
 import { logger } from "../lib/logger.js";
+import { redis } from "../lib/redis.js";
 import crypto from "crypto";
 
 export async function websocketRoutes(app: FastifyInstance) {
@@ -290,6 +291,15 @@ export async function websocketRoutes(app: FastifyInstance) {
         "WebSocket connection closed"
       );
       if (currentSessionId) {
+        try {
+          await matchmakingService.leaveQueue(currentSessionId);
+          const activeMatchId = await redis.get(`match:session:${currentSessionId}`);
+          if (activeMatchId) {
+            await matchmakingService.skipMatch(currentSessionId, activeMatchId, ipAddress);
+          }
+        } catch (err) {
+          logger.error({ err, currentSessionId }, "Error cleaning match state on socket close");
+        }
         await pubSubService.unregisterSessionSocket(currentSessionId);
       }
       if (socketId) {

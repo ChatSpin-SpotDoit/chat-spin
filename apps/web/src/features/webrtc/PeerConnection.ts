@@ -28,10 +28,14 @@ export class PeerConnectionWrapper {
     };
 
     this.pc.ontrack = (event) => {
-      event.streams[0]?.getTracks().forEach((track) => {
-        this.remoteStream.addTrack(track);
-      });
-      callbacks.onRemoteStream(this.remoteStream);
+      if (event.streams && event.streams[0]) {
+        callbacks.onRemoteStream(event.streams[0]);
+      } else {
+        if (!this.remoteStream.getTracks().find((t) => t.id === event.track.id)) {
+          this.remoteStream.addTrack(event.track);
+        }
+        callbacks.onRemoteStream(this.remoteStream);
+      }
     };
 
     this.pc.onconnectionstatechange = () => {

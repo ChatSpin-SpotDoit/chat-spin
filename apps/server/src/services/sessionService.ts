@@ -84,9 +84,10 @@ export class SessionService {
 
     const sessionId = newSession!.id;
 
-    // 3. Check Multi-Tab lock: SET tab:{sessionId} socketId NX EX 60
+    // 3. Check Multi-Tab lock per device
+    const deviceLockKey = deviceId ? `tab:device:${deviceId}` : `tab:session:${sessionId}`;
     const tabLockAcquired = await redis.set(
-      `tab:${sessionId}`,
+      deviceLockKey,
       socketId,
       "EX",
       60,
@@ -94,7 +95,7 @@ export class SessionService {
     );
 
     if (!tabLockAcquired) {
-      logger.warn({ sessionId, socketId, ipAddress }, "Duplicate session detected (multi-tab)");
+      logger.warn({ deviceId, socketId, ipAddress }, "Duplicate session detected (multi-tab)");
       return {
         session: {
           sessionId,
@@ -155,11 +156,15 @@ export class SessionService {
     const sessionId = await redis.get(`session:socket:${socketId}`);
     if (!sessionId) return false;
 
+    const sessionData = await redis.hgetall(`session:${sessionId}`);
+    const deviceId = sessionData["deviceId"];
+    const deviceLockKey = deviceId ? `tab:device:${deviceId}` : `tab:session:${sessionId}`;
+
     // Update presence key TTL
     await redis.set(`presence:${sessionId}`, "online", "PX", PRESENCE_TTL_MS);
 
     // Refresh tab lock TTL
-    await redis.expire(`tab:${sessionId}`, 60);
+    await redis.expire(deviceLockKey, 60);
 
     // Refresh session HASH TTL and lastSeenAt field
     await redis.hset(`session:${sessionId}`, "lastSeenAt", new Date().toISOString());
@@ -175,9 +180,13 @@ export class SessionService {
     const sessionId = await redis.get(`session:socket:${socketId}`);
     if (!sessionId) return { sessionId: null };
 
+    const sessionData = await redis.hgetall(`session:${sessionId}`);
+    const deviceId = sessionData["deviceId"];
+    const deviceLockKey = deviceId ? `tab:device:${deviceId}` : `tab:session:${sessionId}`;
+
     // Clean reverse lookup & tab lock
     await redis.del(`session:socket:${socketId}`);
-    await redis.del(`tab:${sessionId}`);
+    await redis.del(deviceLockKey);
 
     // Update session state in Redis to DISCONNECTED
     await redis.hset(`session:${sessionId}`, {
@@ -185,7 +194,7 @@ export class SessionService {
       disconnectedAt: new Date().toISOString(),
     });
 
-    // Remove presence key (or let it expire)
+    // Remove presence key
     await redis.del(`presence:${sessionId}`);
 
     logger.info({ sessionId, socketId }, "Session socket disconnected");
