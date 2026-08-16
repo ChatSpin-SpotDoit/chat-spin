@@ -84,7 +84,7 @@ export function useChatSession({ isStarted, onChatMessageReceived, onChatMessage
         }
 
         // 2. Connect WebSocket
-        const wsUrl = process.env["NEXT_PUBLIC_WS_URL"] || "ws://localhost:3001/ws";
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001/ws";
         wsClient.connect(wsUrl, {
           onSessionReady: () => {
             if (isCancelled) return;
