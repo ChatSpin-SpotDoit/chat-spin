@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { wsClient } from "@/lib/wsClient";
 import { useCallStore } from "@/store/useCallStore";
 import { VideoContainer } from "@/components/call/VideoContainer";
@@ -18,9 +19,19 @@ export default function HomePage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const localStream = useCallStore((s) => s.localStream);
   const matchId = useCallStore((s) => s.matchId);
+
+  // We need a ref to access the latest isChatOpen state inside the callback
+  const isChatOpenRef = useRef(isChatOpen);
+  useEffect(() => {
+    isChatOpenRef.current = isChatOpen;
+    if (isChatOpen) {
+      setUnreadCount(0); // Reset when opened
+    }
+  }, [isChatOpen]);
 
   // Use the extracted hook
   const { rtcManager, toggleMic, toggleCamera, skipMatch } = useChatSession({
@@ -30,6 +41,14 @@ export default function HomePage() {
         ...prev,
         { id: messageId, senderSessionId, content, sentAt },
       ]);
+      
+      if (!isChatOpenRef.current) {
+        setUnreadCount((prev) => prev + 1);
+        toast("New Message", {
+          description: content.length > 30 ? content.slice(0, 30) + "..." : content,
+          position: "top-center",
+        });
+      }
     },
     onChatMessageDeleted: (messageId, scope) => {
       if (scope === "me") {
@@ -130,7 +149,7 @@ export default function HomePage() {
           {isStarted && (
             <button
               onClick={() => setIsChatOpen(!isChatOpen)}
-              className={`p-2.5 rounded-xl border backdrop-blur-md transition-all flex items-center space-x-2 text-xs font-semibold shadow-lg ${
+              className={`relative p-2.5 rounded-xl border backdrop-blur-md transition-all flex items-center space-x-2 text-xs font-semibold shadow-lg ${
                 isChatOpen
                   ? "bg-indigo-600/80 border-indigo-500 text-white shadow-indigo-500/30"
                   : "bg-black/20 border-white/10 text-white/90 hover:bg-white/10"
@@ -139,6 +158,11 @@ export default function HomePage() {
             >
               <MessageSquare className="w-4 h-4" />
               <span className="hidden sm:inline">Chat</span>
+              {unreadCount > 0 && !isChatOpen && (
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-md animate-pulse">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </button>
           )}
 

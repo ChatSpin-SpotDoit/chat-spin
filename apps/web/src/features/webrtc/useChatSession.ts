@@ -13,6 +13,11 @@ interface UseChatSessionOptions {
 export function useChatSession({ isStarted, onChatMessageReceived, onChatMessageDeleted }: UseChatSessionOptions) {
   const rtcManagerRef = useRef<WebRTCManager | null>(null);
   
+  const callbacksRef = useRef({ onChatMessageReceived, onChatMessageDeleted });
+  useEffect(() => {
+    callbacksRef.current = { onChatMessageReceived, onChatMessageDeleted };
+  }, [onChatMessageReceived, onChatMessageDeleted]);
+
   // Create or retrieve manager
   const getManager = useCallback(() => {
     if (!rtcManagerRef.current) {
@@ -90,9 +95,9 @@ export function useChatSession({ isStarted, onChatMessageReceived, onChatMessage
           },
           onServerMessage: (msg: any) => {
             if (msg.type === "chat:message") {
-              onChatMessageReceived?.(msg.messageId, msg.senderSessionId, msg.content, msg.sentAt);
+              callbacksRef.current.onChatMessageReceived?.(msg.messageId, msg.senderSessionId, msg.content, msg.sentAt);
             } else if (msg.type === "chat:message-delete" || msg.type === "chat:message-deleted") {
-              onChatMessageDeleted?.(msg.messageId, msg.scope);
+              callbacksRef.current.onChatMessageDeleted?.(msg.messageId, msg.scope);
             } else {
               void manager.handleServerMessage(msg);
             }
