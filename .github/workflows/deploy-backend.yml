@@ -70,6 +70,9 @@ jobs:
             echo "REDIS_URL=redis://redis:6379" >> .env
             echo "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS || '*' }}" >> .env
             echo "DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}" >> .env
+            echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET || 'fallback_secret_must_be_at_least_32_chars_long' }}" >> .env
+            echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID || 'dummy_id' }}" >> .env
+            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET || 'dummy_secret' }}" >> .env
             
             # Pull the fresh image and restart the containers
             docker compose -f docker-compose.backend.yml pull server
