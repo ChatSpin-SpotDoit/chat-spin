@@ -39,6 +39,15 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/chatspin-server:latest
+          
+      - name: Build and Push Web Image (ARM64)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/chatspin-web:latest
 
       - name: Copy Compose files to Oracle VM
         uses: appleboy/scp-action@v0.1.7
@@ -75,5 +84,5 @@ jobs:
             echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET || 'dummy_secret' }}" >> .env
             
             # Pull the fresh image and restart the containers
-            docker compose -f docker-compose.backend.yml pull server
+            docker compose -f docker-compose.backend.yml pull server web
             docker compose -f docker-compose.backend.yml up -d

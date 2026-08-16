@@ -51,6 +51,22 @@ services:
       redis:
         condition: service_healthy
 
+  web:
+    image: ${DOCKERHUB_USERNAME:-chatspin}/chatspin-web:latest
+    container_name: chatspin-web-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_WS_URL: wss://api.3dhive.in/ws
+      NEXTAUTH_URL: https://3dhive.in
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+    depends_on:
+      - server
+
 
 volumes:
   postgres_backend_data:
