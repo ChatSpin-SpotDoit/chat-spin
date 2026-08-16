@@ -88,9 +88,9 @@ export class SessionService {
     const tabLockAcquired = await redis.set(
       `tab:${sessionId}`,
       socketId,
-      "NX",
       "EX",
-      60
+      60,
+      "NX"
     );
 
     if (!tabLockAcquired) {

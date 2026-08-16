@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.12",
     "drizzle-kit": "^0.28.0",
     "pino-pretty": "^13.0.0",
     "rimraf": "^6.0.0",
