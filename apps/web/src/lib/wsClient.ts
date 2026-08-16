@@ -9,6 +9,7 @@ import {
   WsErrorCode,
 } from "@chatspin/shared";
 import { getOrCreateDeviceToken } from "./deviceToken";
+import { useStatsStore } from "@/store/useStatsStore";
 
 export type WsStatus =
   | "disconnected"
@@ -177,6 +178,11 @@ export class WsClient {
 
       case "error": {
         this.listeners.onError?.(msg.code, msg.message);
+        break;
+      }
+
+      case "stats:update": {
+        useStatsStore.getState().setOnlineCount(msg.onlineCount);
         break;
       }
 

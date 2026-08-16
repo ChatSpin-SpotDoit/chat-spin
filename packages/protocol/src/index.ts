@@ -338,6 +338,11 @@ export interface ErrorMessage {
   requestId?: string;
 }
 
+export interface StatsUpdateMessage {
+  type: "stats:update";
+  onlineCount: number;
+}
+
 export type ServerMessage =
   | SessionReadyMessage
   | HeartbeatAckMessage
@@ -362,4 +367,5 @@ export type ServerMessage =
   | FriendWebRtcIceCandidateMessage
   | FriendRemovedMessage
   | DmMessageRelayMessage
-  | ErrorMessage;
+  | ErrorMessage
+  | StatsUpdateMessage;

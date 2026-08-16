@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { wsClient } from "@/lib/wsClient";
 import { useCallStore } from "@/store/useCallStore";
+import { useStatsStore } from "@/store/useStatsStore";
 import { VideoContainer } from "@/components/call/VideoContainer";
 import { CallControls } from "@/components/call/CallControls";
 import { ChatPanel, type ChatMessageItem } from "@/components/chat/ChatPanel";
@@ -23,6 +24,7 @@ export default function HomePage() {
 
   const localStream = useCallStore((s) => s.localStream);
   const matchId = useCallStore((s) => s.matchId);
+  const onlineCount = useStatsStore((s) => s.onlineCount);
 
   // We need a ref to access the latest isChatOpen state inside the callback
   const isChatOpenRef = useRef(isChatOpen);
@@ -203,13 +205,20 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md">
+            <div className="pt-4 flex flex-col items-center justify-center gap-6 w-full max-w-md">
               <button
                 onClick={() => setIsStarted(true)}
                 className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-base shadow-xl shadow-indigo-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
               >
                 Start Chatting Anonymously
               </button>
+              
+              <div className="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-slate-900/50 border border-slate-800 shadow-inner">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                <span className="text-xs font-medium text-slate-300 tracking-wide">
+                  Live: {onlineCount > 0 ? onlineCount : "..."} users online
+                </span>
+              </div>
             </div>
           </motion.main>
         ) : (

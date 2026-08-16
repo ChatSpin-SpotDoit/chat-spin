@@ -13,7 +13,21 @@ import { logger } from "../lib/logger.js";
 import { redis } from "../lib/redis.js";
 import crypto from "crypto";
 
+const activeConnections = new Set<WebSocket>();
+let statsBroadcastInterval: NodeJS.Timeout | null = null;
+
 export async function websocketRoutes(app: FastifyInstance) {
+  if (!statsBroadcastInterval) {
+    statsBroadcastInterval = setInterval(() => {
+      const msg: ServerMessage = { type: "stats:update", onlineCount: activeConnections.size };
+      const payload = JSON.stringify(msg);
+      for (const client of activeConnections) {
+        if (client.readyState === 1) { // 1 = OPEN
+          client.send(payload);
+        }
+      }
+    }, 5000);
+  }
   app.get("/ws", { websocket: true }, (connection: any, req: any) => {
     const socket: WebSocket = connection.socket ?? connection;
     const socketId = crypto.randomUUID();
@@ -21,6 +35,8 @@ export async function websocketRoutes(app: FastifyInstance) {
     const userAgent = req.headers["user-agent"];
 
     let currentSessionId: string | null = null;
+
+    activeConnections.add(socket);
 
     logger.info({ socketId, ipAddress }, "New WebSocket connection established");
 
@@ -286,6 +302,7 @@ export async function websocketRoutes(app: FastifyInstance) {
     });
 
     socket.on("close", async (code: number, reason: Buffer) => {
+      activeConnections.delete(socket);
       logger.info(
         { socketId, sessionId: currentSessionId, code, reason: reason.toString() },
         "WebSocket connection closed"
@@ -308,6 +325,7 @@ export async function websocketRoutes(app: FastifyInstance) {
     });
 
     socket.on("error", (err: Error) => {
+      activeConnections.delete(socket);
       logger.error({ err, socketId, sessionId: currentSessionId }, "WebSocket socket error");
     });
   });

@@ -57,6 +57,15 @@ export class WebRTCManager {
       credential: turnCredentials.credential || undefined,
     }));
 
+    const callbacks = {
+      onConnected: () => this.callbacks.onStatusChange("connected"),
+      onReconnecting: () => this.callbacks.onStatusChange("reconnecting"),
+      onFailed: () => this.callbacks.onStatusChange("failed"),
+      onRequestIceRestart: () => void this.requestIceRestart(),
+    };
+
+    this.connectionMonitor.startInitialTimer(callbacks);
+
     const pc = this.peerConnection.createPeerConnection(iceServers, {
       onIceCandidate: (candidate) => {
         if (this.currentMatchId) {
@@ -74,12 +83,7 @@ export class WebRTCManager {
         this.callbacks.onRemoteStream(stream);
       },
       onConnectionStateChange: (state) => {
-        this.connectionMonitor.handleConnectionState(state, {
-          onConnected: () => this.callbacks.onStatusChange("connected"),
-          onReconnecting: () => this.callbacks.onStatusChange("reconnecting"),
-          onFailed: () => this.callbacks.onStatusChange("failed"),
-          onRequestIceRestart: () => void this.requestIceRestart(),
-        });
+        this.connectionMonitor.handleConnectionState(state, callbacks);
       },
       onIceConnectionStateChange: (state) => {
         if (state === "failed") {

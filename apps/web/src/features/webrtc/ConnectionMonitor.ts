@@ -6,6 +6,7 @@ export interface ConnectionMonitorCallbacks {
 }
 
 export class ConnectionMonitor {
+  private initialConnectionTimer: ReturnType<typeof setTimeout> | null = null;
   private disconnectGraceTimer: ReturnType<typeof setTimeout> | null = null;
   private failedTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
   private iceRestartAttempts = 0;
@@ -42,6 +43,14 @@ export class ConnectionMonitor {
     }
   }
 
+  public startInitialTimer(callbacks: ConnectionMonitorCallbacks): void {
+    this.clearTimers();
+    // 10 second timeout for initial WebRTC connection setup
+    this.initialConnectionTimer = setTimeout(() => {
+      callbacks.onFailed();
+    }, 10_000);
+  }
+
   private startGraceTimer(callbacks: ConnectionMonitorCallbacks): void {
     this.clearGraceTimer();
     // 3 second grace period before attempting ICE restart
@@ -66,8 +75,16 @@ export class ConnectionMonitor {
   }
 
   public clearTimers(): void {
+    this.clearInitialTimer();
     this.clearGraceTimer();
     this.clearFailedTimer();
+  }
+
+  private clearInitialTimer(): void {
+    if (this.initialConnectionTimer) {
+      clearTimeout(this.initialConnectionTimer);
+      this.initialConnectionTimer = null;
+    }
   }
 
   private clearGraceTimer(): void {

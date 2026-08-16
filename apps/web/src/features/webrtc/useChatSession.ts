@@ -18,6 +18,28 @@ export function useChatSession({ isStarted, onChatMessageReceived, onChatMessage
     callbacksRef.current = { onChatMessageReceived, onChatMessageDeleted };
   }, [onChatMessageReceived, onChatMessageDeleted]);
 
+  const skipMatch = useCallback(() => {
+    const currentMatchId = useCallStore.getState().matchId;
+    if (currentMatchId) {
+      wsClient.send({
+        type: "match:skip",
+        matchId: currentMatchId,
+        requestId: crypto.randomUUID(),
+      });
+    } else {
+      // Rejoin queue
+      wsClient.send({
+        type: "queue:join",
+        requestId: crypto.randomUUID(),
+      });
+    }
+    if (rtcManagerRef.current) {
+      rtcManagerRef.current.cleanupCall();
+    }
+    useCallStore.getState().resetCall();
+    useCallStore.getState().setStatus("searching");
+  }, []);
+
   // Create or retrieve manager
   const getManager = useCallback(() => {
     if (!rtcManagerRef.current) {
@@ -47,7 +69,9 @@ export function useChatSession({ isStarted, onChatMessageReceived, onChatMessage
             toast.info("Your partner left the chat.", { duration: 3000 });
           } else if (mappedStatus === "connection_failed") {
             toast.dismiss("reconnect-toast");
-            toast.error("Failed to connect. Please try skipping.", { duration: 5000 });
+            toast.error("Connection failed. Finding a new partner...", { duration: 3000 });
+            // Auto skip when connection fails
+            skipMatch();
           }
         },
         onMatchFound: (mId) => useCallStore.getState().setMatchId(mId),
@@ -55,7 +79,7 @@ export function useChatSession({ isStarted, onChatMessageReceived, onChatMessage
       });
     }
     return rtcManagerRef.current;
-  }, []);
+  }, [skipMatch]);
 
   useEffect(() => {
     if (!isStarted) {
@@ -136,28 +160,6 @@ export function useChatSession({ isStarted, onChatMessageReceived, onChatMessage
       useCallStore.getState().setCameraDisabled(!active);
       toast(active ? "Camera enabled" : "Camera disabled");
     }
-  }, []);
-
-  const skipMatch = useCallback(() => {
-    const currentMatchId = useCallStore.getState().matchId;
-    if (currentMatchId) {
-      wsClient.send({
-        type: "match:skip",
-        matchId: currentMatchId,
-        requestId: crypto.randomUUID(),
-      });
-    } else {
-      // Rejoin queue
-      wsClient.send({
-        type: "queue:join",
-        requestId: crypto.randomUUID(),
-      });
-    }
-    if (rtcManagerRef.current) {
-      rtcManagerRef.current.cleanupCall();
-    }
-    useCallStore.getState().resetCall();
-    useCallStore.getState().setStatus("searching");
   }, []);
 
   return {
