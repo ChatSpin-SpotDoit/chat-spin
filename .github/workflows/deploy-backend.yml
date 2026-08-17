@@ -6,6 +6,7 @@ on:
       - prod
     paths:
       - 'apps/server/**'
+      - 'apps/web/**'
       - 'packages/**'
       - 'docker-compose.backend.yml'
       - 'nginx/**'
