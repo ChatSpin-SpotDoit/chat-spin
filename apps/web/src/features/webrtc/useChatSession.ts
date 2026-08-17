@@ -116,6 +116,9 @@ export function useChatSession({ isStarted, onChatMessageReceived, onChatMessage
               type: "queue:join",
               requestId: crypto.randomUUID(),
             });
+
+            // Load friends list once session is ready
+            void loadFriends();
           },
           onServerMessage: (msg: any) => {
             if (msg.type === "chat:message") {
@@ -123,9 +126,58 @@ export function useChatSession({ isStarted, onChatMessageReceived, onChatMessage
             } else if (msg.type === "chat:message-delete" || msg.type === "chat:message-deleted") {
               callbacksRef.current.onChatMessageDeleted?.(msg.messageId, msg.scope);
             } else if (msg.type === "friend:auto-connected") {
-              toast.success("You and your partner are now friends!", {
+              // Lazy-import store to avoid circular deps
+              import("@/store/useFriendsStore").then(({ useFriendsStore }) => {
+                useFriendsStore.getState().addFriend({
+                  friendshipId: msg.friendshipId,
+                  friendSessionId: msg.friendSessionId,
+                  presence: "online",
+                });
+              });
+              toast.success("🎉 You're now friends! Chat for 5 minutes pays off.", {
                 description: "You can now message them later from your Meet History.",
                 duration: 5000,
+              });
+            } else if (msg.type === "friend:incoming-call") {
+              import("@/store/useFriendsStore").then(({ useFriendsStore }) => {
+                useFriendsStore.getState().setIncomingCall({
+                  callId: msg.callId,
+                  friendshipId: msg.friendshipId,
+                  callerSessionId: msg.callerSessionId,
+                });
+              });
+            } else if (msg.type === "friend:call-connected") {
+              import("@/store/useFriendsStore").then(({ useFriendsStore }) => {
+                useFriendsStore.getState().setActiveFriendCall(msg.callId, msg.role);
+                useFriendsStore.getState().setIncomingCall(null);
+              });
+            } else if (msg.type === "friend:call-declined") {
+              import("@/store/useFriendsStore").then(({ useFriendsStore }) => {
+                useFriendsStore.getState().setIncomingCall(null);
+                useFriendsStore.getState().clearActiveFriendCall();
+              });
+              toast.info("Friend declined the call.");
+            } else if (msg.type === "friend:call-ended") {
+              import("@/store/useFriendsStore").then(({ useFriendsStore }) => {
+                useFriendsStore.getState().clearActiveFriendCall();
+              });
+            } else if (msg.type === "friend:presence") {
+              import("@/store/useFriendsStore").then(({ useFriendsStore }) => {
+                useFriendsStore.getState().updateFriendPresence(msg.friendSessionId, msg.status);
+              });
+            } else if (msg.type === "friend:removed") {
+              import("@/store/useFriendsStore").then(({ useFriendsStore }) => {
+                useFriendsStore.getState().removeFriend(msg.friendshipId);
+              });
+            } else if (msg.type === "dm:message") {
+              import("@/store/useFriendsStore").then(({ useFriendsStore }) => {
+                useFriendsStore.getState().addDmMessage(msg.friendshipId, {
+                  id: msg.messageId,
+                  friendshipId: msg.friendshipId,
+                  senderSessionId: msg.senderSessionId,
+                  content: msg.content,
+                  sentAt: msg.sentAt,
+                });
               });
             } else {
               void manager.handleServerMessage(msg);
@@ -173,4 +225,31 @@ export function useChatSession({ isStarted, onChatMessageReceived, onChatMessage
     toggleCamera,
     skipMatch,
   };
+}
+
+/**
+ * Loads the friends list from the REST API using the persisted sessionId.
+ */
+async function loadFriends() {
+  const sessionId =
+    typeof window !== "undefined" ? localStorage.getItem("chatspin_session_id") : null;
+  if (!sessionId) return;
+
+  try {
+    const res = await fetch("/api/friends", {
+      headers: { "x-session-id": sessionId },
+    });
+    if (!res.ok) return;
+    const data = await res.json() as { friends: Array<{ friendshipId: string; friendSessionId: string; presence: string }> };
+    const { useFriendsStore } = await import("@/store/useFriendsStore");
+    useFriendsStore.getState().setFriends(
+      data.friends.map((f) => ({
+        friendshipId: f.friendshipId,
+        friendSessionId: f.friendSessionId,
+        presence: f.presence as "online" | "busy" | "offline",
+      }))
+    );
+  } catch {
+    // Non-critical — friends list can be populated via WS events
+  }
 }

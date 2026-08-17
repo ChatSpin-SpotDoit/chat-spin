@@ -169,6 +169,50 @@ export class WebRTCManager {
     }
   }
 
+  /**
+   * Initiates a WebRTC offer for a friend call.
+   * Uses friend:webrtc:* message types instead of the random-match webrtc:* types.
+   */
+  public async startOfferForFriendCall(callId: string): Promise<void> {
+    this.currentMatchId = callId;
+    this.role = PeerRole.OFFERER;
+
+    const iceServers: RTCIceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
+    this.peerConnection.createPeerConnection(iceServers, {
+      onIceCandidate: (candidate) => {
+        this.wsClient.send({
+          type: "friend:webrtc:ice-candidate",
+          callId,
+          candidate: candidate.candidate,
+          sdpMid: candidate.sdpMid,
+          sdpMLineIndex: candidate.sdpMLineIndex,
+          requestId: crypto.randomUUID(),
+        });
+      },
+      onRemoteStream: (stream) => this.callbacks.onRemoteStream(stream),
+      onConnectionStateChange: (state) => {
+        this.connectionMonitor.handleConnectionState(state, {
+          onConnected: () => this.callbacks.onStatusChange("connected"),
+          onReconnecting: () => this.callbacks.onStatusChange("reconnecting"),
+          onFailed: () => this.callbacks.onStatusChange("failed"),
+          onRequestIceRestart: () => {},
+        });
+      },
+      onIceConnectionStateChange: () => {},
+    });
+
+    const localStream = this.mediaManager.getStream();
+    if (localStream) this.peerConnection.addLocalStream(localStream);
+
+    const offer = await this.peerConnection.createOffer();
+    this.wsClient.send({
+      type: "friend:webrtc:offer",
+      callId,
+      sdp: offer.sdp!,
+      requestId: crypto.randomUUID(),
+    });
+  }
+
   private async requestIceRestart(): Promise<void> {
     if (!this.currentMatchId || this.role !== PeerRole.OFFERER) return;
     const offer = await this.peerConnection.restartIce();

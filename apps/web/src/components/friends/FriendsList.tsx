@@ -1,21 +1,22 @@
 "use client";
 
-import { Phone, UserMinus, UserCheck } from "lucide-react";
+import { Phone, UserMinus, MessageCircle } from "lucide-react";
 import { PresenceState } from "@chatspin/shared";
 
 export interface FriendItem {
   friendshipId: string;
   friendSessionId: string;
-  presence: PresenceState;
+  presence: PresenceState | "online" | "busy" | "offline";
 }
 
 interface FriendsListProps {
   friends: FriendItem[];
   onCallFriend: (friendshipId: string) => void;
   onUnfriend: (friendshipId: string) => void;
+  onMessage: (friendshipId: string) => void;
 }
 
-export function FriendsList({ friends, onCallFriend, onUnfriend }: FriendsListProps) {
+export function FriendsList({ friends, onCallFriend, onUnfriend, onMessage }: FriendsListProps) {
   return (
     <div className="w-full space-y-3">
       <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 px-1">
@@ -23,7 +24,7 @@ export function FriendsList({ friends, onCallFriend, onUnfriend }: FriendsListPr
       </h3>
 
       {friends.length === 0 ? (
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl text-center text-xs text-slate-500">
+        <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl text-center text-xs text-slate-500">
           No friends yet. Talk for 5 minutes during a video chat to become friends automatically!
         </div>
       ) : (
@@ -35,7 +36,7 @@ export function FriendsList({ friends, onCallFriend, onUnfriend }: FriendsListPr
             return (
               <div
                 key={friend.friendshipId}
-                className="p-3 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-between shadow-sm"
+                className="p-3 bg-slate-900/60 border border-slate-800 rounded-2xl flex items-center justify-between shadow-sm hover:border-slate-700 transition-colors"
               >
                 <div className="flex items-center space-x-3">
                   <div className="relative">
@@ -44,7 +45,7 @@ export function FriendsList({ friends, onCallFriend, onUnfriend }: FriendsListPr
                     </div>
                     {/* Presence Dot Indicator */}
                     <span
-                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-900 ${
+                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-950 ${
                         isOnline
                           ? "bg-emerald-500"
                           : isBusy
@@ -65,6 +66,14 @@ export function FriendsList({ friends, onCallFriend, onUnfriend }: FriendsListPr
                 </div>
 
                 <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => onMessage(friend.friendshipId)}
+                    className="p-2.5 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-400 rounded-xl transition-all border border-indigo-500/20"
+                    title="Send Message"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </button>
+
                   <button
                     onClick={() => onCallFriend(friend.friendshipId)}
                     disabled={!isOnline}

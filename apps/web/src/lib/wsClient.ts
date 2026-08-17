@@ -167,6 +167,12 @@ export class WsClient {
       case "session:ready": {
         this.sessionId = msg.sessionId;
         this.setStatus("ready");
+        // Persist for use by pages that load without an active WS (e.g. History page)
+        try {
+          localStorage.setItem("chatspin_session_id", msg.sessionId);
+        } catch {
+          // localStorage may be unavailable in SSR/private contexts
+        }
         this.listeners.onSessionReady?.(msg.sessionId, msg.identityType);
         break;
       }

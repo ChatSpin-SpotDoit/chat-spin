@@ -1,14 +1,14 @@
 import { redis } from "../lib/redis.js";
 import { db } from "../lib/db.js";
 import { logger } from "../lib/logger.js";
-import { matches, friendships, bans, blocks } from "../db/schema.js";
-import { eq, or, and, lte } from "drizzle-orm";
+import { matches, meetHistory, friendships, bans } from "../db/schema.js";
+import { eq, or, and } from "drizzle-orm";
 import { pubSubService } from "./pubsubService.js";
+import { signalingService } from "./signalingService.js";
 import { getServerEnv } from "@chatspin/config";
 import {
   SessionState,
   PeerRole,
-  WsErrorCode,
   MatchEndReason,
   FriendshipOrigin,
 } from "@chatspin/shared";
@@ -117,11 +117,14 @@ export class MatchmakingService {
 
   /**
    * Check if sessionA or sessionB has blocked the other.
+   * Uses the Redis blocks:<sessionId> SSET written by moderationService.blockUser().
    */
   private async checkBlockExclusion(sessionA: string, sessionB: string): Promise<boolean> {
-    // Note: blocks table does not have blockedSessionId, it uses blockedFingerprint.
-    // For now, this is a placeholder returning false until full device lookups are implemented.
-    return false;
+    const [aBlockedB, bBlockedA] = await Promise.all([
+      redis.sismember(`blocks:${sessionA}`, sessionB),
+      redis.sismember(`blocks:${sessionB}`, sessionA),
+    ]);
+    return aBlockedB === 1 || bBlockedA === 1;
   }
 
   /**
@@ -171,17 +174,8 @@ export class MatchmakingService {
       await redis.hset(`session:${sessionA}`, { state: SessionState.IN_CALL, matchId });
       await redis.hset(`session:${sessionB}`, { state: SessionState.IN_CALL, matchId });
 
-      // Generate short-lived TURN credentials (if enabled)
-      const turnCredentials = {
-        urls: env.TURN_ENABLED
-          ? [
-              `turn:${env.COTURN_HOST}:${env.COTURN_PORT}`,
-              `turns:${env.COTURN_HOST}:${env.COTURN_TLS_PORT}`,
-            ]
-          : ["stun:stun.l.google.com:19302"],
-        username: "chatspin",
-        credential: env.COTURN_SECRET,
-      };
+      // Generate short-lived HMAC-SHA1 TURN credentials via signalingService
+      const turnCredentials = signalingService.generateTurnCredentials(matchId);
 
       // Notify Session A (Offerer)
       await pubSubService.publishToSession(sessionA, {
@@ -230,14 +224,43 @@ export class MatchmakingService {
       const durationMs = startTime > 0 ? Date.now() - startTime : 0;
 
       // Update DB record
+      const endedAt = new Date();
       await db
         .update(matches)
         .set({
-          endedAt: new Date(),
+          endedAt,
           durationMs,
           endReason: MatchEndReason.SKIP,
         })
         .where(eq(matches.id, matchId));
+
+      // Write meetHistory rows for both participants so the History page has data
+      const sessionA = matchData["sessionA"]!;
+      const sessionB = matchData["sessionB"]!;
+      if (sessionA && sessionB) {
+        await db.insert(meetHistory).values([
+          {
+            matchId,
+            viewerDeviceId: null,
+            viewerUserId: null,
+            peerFingerprint: sessionB,
+            peerUserId: null,
+            startedAt: new Date(startTime || Date.now()),
+            durationMs,
+            endReason: MatchEndReason.SKIP,
+          },
+          {
+            matchId,
+            viewerDeviceId: null,
+            viewerUserId: null,
+            peerFingerprint: sessionA,
+            peerUserId: null,
+            startedAt: new Date(startTime || Date.now()),
+            durationMs,
+            endReason: MatchEndReason.SKIP,
+          },
+        ]).onConflictDoNothing();
+      }
 
       // Clean Redis keys
       await redis.del(`match:${matchId}`);

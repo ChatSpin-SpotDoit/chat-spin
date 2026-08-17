@@ -65,6 +65,10 @@ export class MediaManager {
     return this.cameraDisabled;
   }
 
+  getStream(): MediaStream | null {
+    return this.localStream;
+  }
+
   stopLocalStream(): void {
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => track.stop());

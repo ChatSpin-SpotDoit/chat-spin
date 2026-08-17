@@ -1,17 +1,24 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import { wsClient } from "@/lib/wsClient";
 import { useCallStore } from "@/store/useCallStore";
 import { useStatsStore } from "@/store/useStatsStore";
+import { useFriendsStore } from "@/store/useFriendsStore";
 import { VideoContainer } from "@/components/call/VideoContainer";
 import { CallControls } from "@/components/call/CallControls";
 import { ChatPanel, type ChatMessageItem } from "@/components/chat/ChatPanel";
 import { DeviceSettingsModal } from "@/components/call/DeviceSettingsModal";
+import { FriendsList } from "@/components/friends/FriendsList";
+import { DmPanel } from "@/components/friends/DmPanel";
+import { FriendCallScreen } from "@/components/friends/FriendCallScreen";
+import { IncomingCallModal } from "@/components/friends/IncomingCallModal";
 import { useChatSession } from "@/features/webrtc/useChatSession";
 import { ChatDeleteScope } from "@chatspin/shared";
-import { Video, Shield, History, Settings, Sparkles, MessageSquare } from "lucide-react";
+import {
+  Video, Shield, History, Settings, Sparkles, MessageSquare, Users, X,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
@@ -19,6 +26,7 @@ export default function HomePage() {
   const [isStarted, setIsStarted] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isFriendsOpen, setIsFriendsOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -26,16 +34,26 @@ export default function HomePage() {
   const matchId = useCallStore((s) => s.matchId);
   const onlineCount = useStatsStore((s) => s.onlineCount);
 
-  // We need a ref to access the latest isChatOpen state inside the callback
+  // Friends store
+  const friends = useFriendsStore((s) => s.friends);
+  const incomingCall = useFriendsStore((s) => s.incomingCall);
+  const activeFriendCallId = useFriendsStore((s) => s.activeFriendCallId);
+  const activeFriendCallRole = useFriendsStore((s) => s.activeFriendCallRole);
+  const openDmFriendshipId = useFriendsStore((s) => s.openDmFriendshipId);
+  const setOpenDmFriendshipId = useFriendsStore((s) => s.setOpenDmFriendshipId);
+  const setIncomingCall = useFriendsStore((s) => s.setIncomingCall);
+
+  const onlineFriendsCount = friends.filter(
+    (f) => f.presence === "online" || f.presence === "busy"
+  ).length;
+
+  // Ref to track chat open state in callbacks
   const isChatOpenRef = useRef(isChatOpen);
   useEffect(() => {
     isChatOpenRef.current = isChatOpen;
-    if (isChatOpen) {
-      setUnreadCount(0); // Reset when opened
-    }
+    if (isChatOpen) setUnreadCount(0);
   }, [isChatOpen]);
 
-  // Use the extracted hook
   const { rtcManager, toggleMic, toggleCamera, skipMatch } = useChatSession({
     isStarted,
     onChatMessageReceived: (messageId, senderSessionId, content, sentAt) => {
@@ -43,7 +61,6 @@ export default function HomePage() {
         ...prev,
         { id: messageId, senderSessionId, content, sentAt },
       ]);
-      
       if (!isChatOpenRef.current) {
         setUnreadCount((prev) => prev + 1);
         toast("New Message", {
@@ -73,7 +90,6 @@ export default function HomePage() {
       sentAt: new Date().toISOString(),
     };
     setChatMessages((prev) => [...prev, newMsg]);
-
     wsClient.send({
       type: "chat:message",
       matchId,
@@ -100,11 +116,83 @@ export default function HomePage() {
     }
   };
 
+  // Friend actions
+  const handleCallFriend = useCallback((friendshipId: string) => {
+    const callId = crypto.randomUUID();
+    wsClient.send({ type: "friend:call", friendshipId, callId, requestId: crypto.randomUUID() });
+  }, []);
+
+  const handleUnfriend = useCallback((friendshipId: string) => {
+    const sessionId = typeof window !== "undefined" ? localStorage.getItem("chatspin_session_id") : null;
+    if (!sessionId) return;
+    fetch(`/api/friends/${friendshipId}`, {
+      method: "DELETE",
+      headers: { "x-session-id": sessionId },
+    }).then(() => {
+      useFriendsStore.getState().removeFriend(friendshipId);
+      toast("Friend removed.");
+    }).catch(() => toast.error("Failed to remove friend."));
+  }, []);
+
+  const handleAcceptCall = useCallback(() => {
+    if (!incomingCall) return;
+    wsClient.send({ type: "friend:call-accept", callId: incomingCall.callId, requestId: crypto.randomUUID() });
+    useFriendsStore.getState().setActiveFriendCall(incomingCall.callId, "answerer");
+    setIncomingCall(null);
+  }, [incomingCall, setIncomingCall]);
+
+  const handleDeclineCall = useCallback(() => {
+    if (!incomingCall) return;
+    wsClient.send({ type: "friend:call-decline", callId: incomingCall.callId, requestId: crypto.randomUUID() });
+    setIncomingCall(null);
+  }, [incomingCall, setIncomingCall]);
+
+  const openDmPanel = useCallback((friendshipId: string) => {
+    setOpenDmFriendshipId(friendshipId);
+    setIsFriendsOpen(false);
+  }, [setOpenDmFriendshipId]);
+
+  const dmFriend = openDmFriendshipId
+    ? friends.find((f) => f.friendshipId === openDmFriendshipId)
+    : null;
+
   return (
     <div className="h-[100dvh] w-screen overflow-hidden relative bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500 selection:text-white">
-      {/* Absolute Full-Bleed Background Video Container (Only rendered when started) */}
+
+      {/* Friend Call Screen — full screen overlay (z-50) */}
       <AnimatePresence>
-        {isStarted && (
+        {activeFriendCallId && activeFriendCallRole && (
+          <FriendCallScreen
+            key="friend-call"
+            callId={activeFriendCallId}
+            role={activeFriendCallRole}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Incoming Call Modal */}
+      <AnimatePresence>
+        {incomingCall && !activeFriendCallId && (
+          <motion.div
+            key="incoming-call"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="absolute top-24 left-1/2 -translate-x-1/2 z-50"
+          >
+            <IncomingCallModal
+              isOpen={true}
+              callerName={incomingCall.callerSessionId}
+              onAccept={handleAcceptCall}
+              onDecline={handleDeclineCall}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Absolute Full-Bleed Background Video Container */}
+      <AnimatePresence>
+        {isStarted && !activeFriendCallId && (
           <motion.div
             key="video-container"
             initial={{ opacity: 0 }}
@@ -132,6 +220,25 @@ export default function HomePage() {
         </div>
 
         <div className="flex items-center space-x-3">
+          {/* Friends panel toggle — always visible */}
+          <button
+            onClick={() => setIsFriendsOpen(!isFriendsOpen)}
+            className={`relative p-2.5 rounded-xl border backdrop-blur-md transition-all flex items-center space-x-2 text-xs font-semibold shadow-lg ${
+              isFriendsOpen
+                ? "bg-purple-600/80 border-purple-500 text-white"
+                : "bg-black/20 border-white/10 text-white/90 hover:bg-white/10"
+            }`}
+            title="Friends"
+          >
+            <Users className="w-4 h-4" />
+            <span className="hidden sm:inline">Friends</span>
+            {onlineFriendsCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center bg-emerald-500 text-white text-[10px] font-bold rounded-full shadow-md">
+                {onlineFriendsCount > 9 ? "9+" : onlineFriendsCount}
+              </span>
+            )}
+          </button>
+
           <Link
             href="/history"
             className="p-2.5 rounded-xl bg-black/20 backdrop-blur-md border border-white/10 text-white/90 hover:bg-white/10 transition-all flex items-center space-x-2 text-xs font-semibold shadow-lg"
@@ -179,6 +286,61 @@ export default function HomePage() {
           )}
         </div>
       </header>
+
+      {/* Friends Sidebar */}
+      <AnimatePresence>
+        {isFriendsOpen && (
+          <motion.aside
+            key="friends-panel"
+            initial={{ opacity: 0, x: -300 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -300 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="absolute top-20 left-4 bottom-4 w-72 z-40 rounded-3xl overflow-hidden bg-slate-950/90 backdrop-blur-2xl border border-white/10 shadow-2xl flex flex-col"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <div className="flex items-center space-x-2">
+                <Users className="w-4 h-4 text-purple-400" />
+                <span className="text-sm font-bold text-slate-200">Friends</span>
+              </div>
+              <button
+                onClick={() => setIsFriendsOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              <FriendsList
+                friends={friends}
+                onCallFriend={handleCallFriend}
+                onUnfriend={handleUnfriend}
+                onMessage={openDmPanel}
+              />
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* DM Panel */}
+      <AnimatePresence>
+        {openDmFriendshipId && dmFriend && (
+          <motion.div
+            key="dm-panel"
+            initial={{ opacity: 0, x: 50, scale: 0.95 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 50, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            className="absolute top-24 right-4 bottom-4 w-80 sm:w-96 z-40 shadow-2xl"
+          >
+            <DmPanel
+              friendshipId={openDmFriendshipId}
+              friendLabel={`Friend (${dmFriend.friendSessionId.slice(0, 6)})`}
+              onClose={() => setOpenDmFriendshipId(null)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Overlay Content */}
       <AnimatePresence mode="wait">
@@ -230,7 +392,7 @@ export default function HomePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 pointer-events-none z-30" // Pointer events none so video clicks pass through
+            className="absolute inset-0 pointer-events-none z-30"
           >
             {/* Floating Chat Panel */}
             <AnimatePresence>
