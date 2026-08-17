@@ -50,7 +50,7 @@ export function ChatPanel({
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-950/40 backdrop-blur-xl border border-white/10 w-full sm:w-96 shadow-2xl rounded-3xl overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-slate-950/95 sm:bg-slate-950/60 backdrop-blur-3xl sm:border sm:border-white/10 shadow-2xl overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-black/20">
         <h3 className="font-semibold text-white text-sm tracking-wide">Match Chat</h3>
@@ -78,10 +78,10 @@ export function ChatPanel({
                 className={`group relative flex flex-col ${isMe ? "items-end" : "items-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-md relative ${
+                  className={`max-w-[85%] rounded-[20px] px-4 py-3 text-sm shadow-xl relative transition-all ${
                     isMe
-                      ? "bg-gradient-to-tr from-indigo-600 to-purple-500 text-white rounded-br-none"
-                      : "bg-black/40 text-slate-100 rounded-bl-none border border-white/5 backdrop-blur-md"
+                      ? "bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white rounded-br-sm shadow-indigo-500/20"
+                      : "bg-slate-800/80 text-slate-100 rounded-bl-sm border border-white/5 backdrop-blur-md"
                   }`}
                 >
                   {isDeleted ? (
@@ -146,14 +146,14 @@ export function ChatPanel({
           placeholder="Type a message..."
           maxLength={1000}
           disabled={!matchId}
-          className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 disabled:opacity-50 transition-all backdrop-blur-md"
+          className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:bg-white/10 disabled:opacity-50 transition-all backdrop-blur-md"
         />
         <button
           type="submit"
           disabled={!inputContent.trim() || !matchId}
-          className="p-3 bg-indigo-500 hover:bg-indigo-400 disabled:opacity-30 disabled:hover:bg-indigo-500 disabled:cursor-not-allowed text-white rounded-xl transition-all shadow-lg"
+          className="p-3.5 bg-gradient-to-tr from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 disabled:opacity-30 disabled:hover:from-indigo-500 disabled:hover:to-purple-500 disabled:cursor-not-allowed text-white rounded-2xl transition-all shadow-lg hover:shadow-indigo-500/30 active:scale-95"
         >
-          <Send className="w-4 h-4" />
+          <Send className="w-5 h-5" />
         </button>
       </form>
     </div>

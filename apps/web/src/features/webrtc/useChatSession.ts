@@ -122,6 +122,11 @@ export function useChatSession({ isStarted, onChatMessageReceived, onChatMessage
               callbacksRef.current.onChatMessageReceived?.(msg.messageId, msg.senderSessionId, msg.content, msg.sentAt);
             } else if (msg.type === "chat:message-delete" || msg.type === "chat:message-deleted") {
               callbacksRef.current.onChatMessageDeleted?.(msg.messageId, msg.scope);
+            } else if (msg.type === "friend:auto-connected") {
+              toast.success("You and your partner are now friends!", {
+                description: "You can now message them later from your Meet History.",
+                duration: 5000,
+              });
             } else {
               void manager.handleServerMessage(msg);
             }

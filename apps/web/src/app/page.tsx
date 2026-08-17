@@ -185,10 +185,10 @@ export default function HomePage() {
         {!isStarted ? (
           <motion.main
             key="landing"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
+            exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="relative z-10 flex-1 h-full flex flex-col items-center justify-center p-6 text-center max-w-4xl mx-auto space-y-8"
           >
             <div className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-indigo-300 text-xs font-bold tracking-widest uppercase backdrop-blur-md shadow-2xl">
@@ -236,11 +236,11 @@ export default function HomePage() {
             <AnimatePresence>
               {isChatOpen && (
                 <motion.div
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  initial={{ opacity: 0, y: 40, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
-                  className="absolute inset-0 sm:top-24 sm:right-4 sm:bottom-32 sm:left-auto sm:w-96 pointer-events-auto sm:shadow-2xl sm:rounded-3xl overflow-hidden bg-slate-950 sm:bg-transparent z-50"
+                  exit={{ opacity: 0, y: 30, scale: 0.95, filter: "blur(5px)" }}
+                  transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                  className="absolute top-20 left-0 right-0 bottom-0 sm:top-24 sm:right-4 sm:bottom-32 sm:left-auto sm:w-96 pointer-events-auto sm:shadow-2xl sm:rounded-3xl overflow-hidden bg-slate-950 sm:bg-transparent z-50"
                 >
                   <ChatPanel
                     currentSessionId="me"

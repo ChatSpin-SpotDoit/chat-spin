@@ -40,7 +40,7 @@ const serverEnvSchema = z.object({
   TURN_CREDENTIAL_TTL: z.coerce.number().int().default(3600),
 
   // ─── Friends ──────────────────────────────────────────────────────────────
-  AUTO_FRIEND_THRESHOLD_SECONDS: z.coerce.number().int().min(10).default(300),
+  AUTO_FRIEND_THRESHOLD_SECONDS: z.coerce.number().int().min(1).default(10),
   FRIEND_CALL_RING_TIMEOUT_SECONDS: z.coerce.number().int().min(10).default(45),
 
   // ─── Chat ─────────────────────────────────────────────────────────────────

@@ -32,7 +32,7 @@ export function VideoContainer() {
   return (
     <div className="relative w-full h-full bg-slate-950 flex flex-col md:flex-row items-center justify-center overflow-hidden">
       {/* Remote Video Container */}
-      <div className={`w-full h-full transition-all duration-500 relative flex items-center justify-center ${
+      <motion.div layout transition={{ type: "spring", damping: 30, stiffness: 200 }} className={`w-full h-full relative flex items-center justify-center ${
         status === "connected" ? "md:w-1/2 border-r border-white/5" : "w-full"
       }`}>
         <video
@@ -43,7 +43,7 @@ export function VideoContainer() {
             status === "connected" ? "blur-0 scale-100 opacity-100" : "blur-3xl scale-110 opacity-30"
           }`}
         />
-      </div>
+      </motion.div>
 
       <AnimatePresence mode="wait">
         {status !== "connected" && (
@@ -52,7 +52,7 @@ export function VideoContainer() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.05 }}
-            transition={{ duration: 0.3 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-4 z-10 bg-black/40 backdrop-blur-md"
           >
             {status === "searching" && (
@@ -103,13 +103,15 @@ export function VideoContainer() {
       <AnimatePresence>
         {localStream && (
           <motion.div
+            layout
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ layout: { type: "spring", damping: 25, stiffness: 200 } }}
             className={
               status === "connected"
-                ? "absolute bottom-32 right-4 w-28 h-40 rounded-2xl md:relative md:bottom-auto md:right-auto md:w-1/2 md:h-full md:rounded-none z-20 shadow-2xl md:shadow-none overflow-hidden bg-black transition-all duration-500"
-                : "absolute top-24 right-4 w-28 h-40 rounded-2xl md:top-24 md:right-6 md:w-40 md:h-56 z-20 shadow-2xl overflow-hidden bg-black transition-all duration-500"
+                ? "absolute bottom-32 right-4 w-28 h-40 rounded-2xl md:relative md:bottom-auto md:right-auto md:w-1/2 md:h-full md:rounded-none z-20 shadow-2xl md:shadow-none overflow-hidden bg-black"
+                : "absolute top-24 right-4 w-28 h-40 rounded-2xl md:top-24 md:right-6 md:w-40 md:h-56 z-20 shadow-2xl overflow-hidden bg-black"
             }
           >
             <video
