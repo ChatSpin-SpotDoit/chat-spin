@@ -191,26 +191,29 @@ export default function HomePage() {
             transition={{ duration: 0.4, ease: "easeOut" }}
             className="relative z-10 flex-1 h-full flex flex-col items-center justify-center p-6 text-center max-w-4xl mx-auto space-y-8"
           >
-            <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold tracking-wide uppercase">
-              <Sparkles className="w-4 h-4 animate-spin-slow" />
-              <span>Real-time Anonymous Video Matching</span>
+            <div className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-indigo-300 text-xs font-bold tracking-widest uppercase backdrop-blur-md shadow-2xl">
+              <Sparkles className="w-4 h-4 animate-spin-slow text-indigo-400" />
+              <span>Real-time Video Matching</span>
             </div>
 
-            <div className="space-y-4 max-w-2xl">
-              <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight">
-                Connect Instantly with Strangers Worldwide
+            <div className="space-y-6 max-w-3xl relative">
+              <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-3xl rounded-full -z-10 animate-pulse"></div>
+              <h1 className="text-5xl sm:text-7xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-500 leading-tight">
+                Connect Instantly.<br/>
+                <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">No Boundaries.</span>
               </h1>
-              <p className="text-base sm:text-lg text-slate-400 leading-relaxed">
-                Safe, fast, and encrypted peer-to-peer video chat. Meet new people, chat in real-time, or automatically become friends after 5 minutes!
+              <p className="text-lg sm:text-xl text-slate-400 leading-relaxed font-medium">
+                Safe, fast, and encrypted peer-to-peer video chat. Meet new people in milliseconds.
               </p>
             </div>
 
-            <div className="pt-4 flex flex-col items-center justify-center gap-6 w-full max-w-md">
+            <div className="pt-8 flex flex-col items-center justify-center gap-6 w-full max-w-md relative z-10">
               <button
                 onClick={() => setIsStarted(true)}
-                className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white font-bold text-base shadow-xl shadow-indigo-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+                className="group relative w-full sm:w-auto px-10 py-5 rounded-full bg-white text-slate-950 font-black text-lg sm:text-xl transition-all hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.3)] hover:shadow-[0_0_60px_rgba(255,255,255,0.5)] overflow-hidden"
               >
-                Start Chatting Anonymously
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <span className="relative z-10">Start Chatting Now</span>
               </button>
               
               <div className="flex items-center space-x-2 px-4 py-1.5 rounded-full bg-slate-900/50 border border-slate-800 shadow-inner">
@@ -233,11 +236,11 @@ export default function HomePage() {
             <AnimatePresence>
               {isChatOpen && (
                 <motion.div
-                  initial={{ opacity: 0, x: 50, scale: 0.95 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: 50, scale: 0.95 }}
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 20, scale: 0.95 }}
                   transition={{ duration: 0.3, ease: "easeOut" }}
-                  className="absolute top-24 right-4 bottom-32 w-80 sm:w-96 pointer-events-auto shadow-2xl rounded-3xl overflow-hidden"
+                  className="absolute inset-0 sm:top-24 sm:right-4 sm:bottom-32 sm:left-auto sm:w-96 pointer-events-auto sm:shadow-2xl sm:rounded-3xl overflow-hidden bg-slate-950 sm:bg-transparent z-50"
                 >
                   <ChatPanel
                     currentSessionId="me"
@@ -257,6 +260,7 @@ export default function HomePage() {
                 onToggleMic={toggleMic}
                 onToggleCamera={toggleCamera}
                 onSkip={skipMatch}
+                onStop={() => setIsStarted(false)}
               />
             </div>
           </motion.div>

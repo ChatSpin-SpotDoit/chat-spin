@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallStore } from "@/store/useCallStore";
-import { Mic, MicOff, Video, VideoOff, SkipForward } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, SkipForward, Power } from "lucide-react";
 
 interface CallControlsProps {
   onToggleMic: () => void;
   onToggleCamera: () => void;
   onSkip: () => void;
+  onStop: () => void;
 }
 
-export function CallControls({ onToggleMic, onToggleCamera, onSkip }: CallControlsProps) {
+export function CallControls({ onToggleMic, onToggleCamera, onSkip, onStop }: CallControlsProps) {
   const isMicMuted = useCallStore((s) => s.isMicMuted);
   const isCameraDisabled = useCallStore((s) => s.isCameraDisabled);
   const status = useCallStore((s) => s.status);
@@ -42,6 +43,15 @@ export function CallControls({ onToggleMic, onToggleCamera, onSkip }: CallContro
         title={isCameraDisabled ? "Turn On Camera" : "Turn Off Camera"}
       >
         {isCameraDisabled ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+      </button>
+
+      {/* Stop Matching Button */}
+      <button
+        onClick={onStop}
+        className="p-4 rounded-full bg-red-600/90 hover:bg-red-500 text-white transition-all shadow-lg shadow-red-500/30"
+        title="Stop Searching / End Chat"
+      >
+        <Power className="w-6 h-6" />
       </button>
 
       {/* Skip Button */}

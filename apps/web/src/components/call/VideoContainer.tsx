@@ -30,16 +30,20 @@ export function VideoContainer() {
   }, [remoteStream, status]);
 
   return (
-    <div className="relative w-full h-full bg-slate-950 flex items-center justify-center">
-      {/* Remote Video (Always rendered but blurred if not connected) */}
-      <video
-        ref={remoteVideoRef}
-        autoPlay
-        playsInline
-        className={`absolute inset-0 w-full h-full object-cover transition-all duration-1000 ${
-          status === "connected" ? "blur-0 scale-100 opacity-100" : "blur-3xl scale-110 opacity-30"
-        }`}
-      />
+    <div className="relative w-full h-full bg-slate-950 flex flex-col md:flex-row items-center justify-center overflow-hidden">
+      {/* Remote Video Container */}
+      <div className={`w-full h-full transition-all duration-500 relative flex items-center justify-center ${
+        status === "connected" ? "md:w-1/2 border-r border-white/5" : "w-full"
+      }`}>
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          className={`absolute inset-0 w-full h-full object-cover transition-all duration-1000 ${
+            status === "connected" ? "blur-0 scale-100 opacity-100" : "blur-3xl scale-110 opacity-30"
+          }`}
+        />
+      </div>
 
       <AnimatePresence mode="wait">
         {status !== "connected" && (
@@ -95,14 +99,18 @@ export function VideoContainer() {
         )}
       </AnimatePresence>
 
-      {/* Local Video Preview (Pip Overlay) */}
+      {/* Local Video Preview (Pip Overlay or 50/50 Split on Desktop) */}
       <AnimatePresence>
         {localStream && (
           <motion.div
-            initial={{ opacity: 0, x: 20, scale: 0.9 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="absolute top-24 right-6 w-32 h-44 sm:w-40 sm:h-56 rounded-3xl overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.4)] bg-black z-20"
+            className={
+              status === "connected"
+                ? "absolute bottom-32 right-4 w-28 h-40 rounded-2xl md:relative md:bottom-auto md:right-auto md:w-1/2 md:h-full md:rounded-none z-20 shadow-2xl md:shadow-none overflow-hidden bg-black transition-all duration-500"
+                : "absolute top-24 right-4 w-28 h-40 rounded-2xl md:top-24 md:right-6 md:w-40 md:h-56 z-20 shadow-2xl overflow-hidden bg-black transition-all duration-500"
+            }
           >
             <video
               ref={localVideoRef}
@@ -111,8 +119,8 @@ export function VideoContainer() {
               muted
               className="w-full h-full object-cover -scale-x-100"
             />
-            {/* Inner shadow overlay for premium feel */}
-            <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] pointer-events-none rounded-3xl ring-1 ring-white/10" />
+            {/* Inner shadow overlay for premium feel - hidden on desktop split */}
+            <div className="absolute inset-0 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] pointer-events-none md:hidden rounded-2xl ring-1 ring-white/10" />
           </motion.div>
         )}
       </AnimatePresence>

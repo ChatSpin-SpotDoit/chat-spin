@@ -108,6 +108,7 @@ export function useChatSession({ isStarted, onChatMessageReceived, onChatMessage
         }
 
         // 2. Connect WebSocket
+        // @ts-expect-error - Next.js requires dot notation for static replacement, but tsconfig forbids property access from index signature
         const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001/ws";
         wsClient.connect(wsUrl, {
           onSessionReady: () => {
