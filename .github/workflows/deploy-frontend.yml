@@ -1,15 +1,15 @@
-name: Deploy Backend via Docker Hub
+name: Deploy Frontend via Docker Hub
 
 on:
   push:
     branches:
       - prod
     paths:
-      - 'apps/server/**'
+      - 'apps/web/**'
       - 'packages/**'
       - 'docker-compose.backend.yml'
       - 'nginx/**'
-      - '.github/workflows/deploy-backend.yml'
+      - '.github/workflows/deploy-frontend.yml'
 
 concurrency:
   group: deploy-oracle-vm
@@ -35,14 +35,16 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           
-      - name: Build and Push Server Image (ARM64)
+      - name: Build and Push Web Image (ARM64)
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: apps/server/Dockerfile
+          file: apps/web/Dockerfile
           platforms: linux/arm64
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/chatspin-server:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/chatspin-web:latest
+          build-args: |
+            NEXT_PUBLIC_WS_URL=wss://api.3dhive.in/ws
 
       - name: Copy Compose files to Oracle VM
         uses: appleboy/scp-action@v0.1.7
@@ -78,6 +80,6 @@ jobs:
             echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID || 'dummy_id' }}" >> .env
             echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET || 'dummy_secret' }}" >> .env
             
-            # Pull the fresh image and restart only the server container
-            docker compose -f docker-compose.backend.yml pull server
-            docker compose -f docker-compose.backend.yml up -d server
+            # Pull the fresh image and restart only the web container
+            docker compose -f docker-compose.backend.yml pull web
+            docker compose -f docker-compose.backend.yml up -d web
